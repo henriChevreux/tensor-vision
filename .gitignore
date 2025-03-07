@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+venv/
+.env
+
+# PyTorch specific
+*.pt
+*.pth
+
+# Node (for root-level Node modules if any)
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# Data
+data/
+*.csv
+*.json
+*.h5
+
+# IDEs and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
