@@ -4,6 +4,7 @@ import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
 from tensor_vision import VisualizableModel, VisualizationServer
+import time
 
 # Define a simple CNN for MNIST
 class MnistCNN(nn.Module):
@@ -52,7 +53,7 @@ def load_data():
     
     return train_loader
 
-def train_model(model, train_loader, num_epochs=3):
+def train_model(model, train_loader, server, num_epochs=3):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
     
@@ -84,11 +85,26 @@ def train_model(model, train_loader, num_epochs=3):
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
+            accuracy = 100 * correct / total
+            
+            # Update running loss
+            running_loss += loss.item()
+            
+            # Update training statistics (now using the safer method)
+            if i % 10 == 0:  # Update every 10 batches
+                stats = {
+                    'epoch': epoch + 1,
+                    'batch': i + 1,
+                    'loss': loss.item(),
+                    'accuracy': accuracy,
+                    'running_loss': running_loss / (i + 1),
+                    'timestamp': time.time()
+                }
+                server.update_training_stats('mnist_cnn', stats)
             
             # Print statistics
-            running_loss += loss.item()
             if i % 100 == 99:
-                print(f'[Epoch {epoch+1}, Batch {i+1}] Loss: {running_loss/100:.3f} Accuracy: {100*correct/total:.2f}%')
+                print(f'[Epoch {epoch+1}, Batch {i+1}] Loss: {running_loss/100:.3f} Accuracy: {accuracy:.2f}%')
                 running_loss = 0.0
                 
     print('Finished Training')
@@ -111,7 +127,7 @@ if __name__ == "__main__":
     
     # Load data and train model
     train_loader = load_data()
-    train_model(visual_model, train_loader, num_epochs=3)
+    train_model(visual_model, train_loader, server, num_epochs=3)
     
     print("Training complete. Keeping server alive for visualization.")
     print("Press Ctrl+C to exit.")

@@ -1,4 +1,5 @@
 from flask import Flask, jsonify, request, send_from_directory
+from flask_socketio import SocketIO, emit
 from flask_cors import CORS
 import os
 import json
@@ -9,8 +10,17 @@ class VisualizationServer:
         self.port = port
         self.app = Flask(__name__, static_folder='../../frontend/build')
         CORS(self.app)
+        self.socketio = SocketIO(self.app, cors_allowed_origins="*", async_mode="threading")
         self.visual_models = {}
+        self.latest_stats = {}  # Store latest stats here
         self.setup_routes()
+        
+        # Add a stats endpoint
+        @self.app.route('/api/models/<model_id>/training_stats', methods=['GET'])
+        def get_training_stats(model_id):
+            if model_id not in self.latest_stats:
+                return jsonify({'error': 'No stats available'}), 404
+            return jsonify(self.latest_stats[model_id])
         
     def setup_routes(self):
         app = self.app
@@ -72,14 +82,28 @@ class VisualizationServer:
         model_id = name or model.model_id
         self.visual_models[model_id] = model
         return model_id
+
+    def emit_training_stats(self, model_id, stats):
+        """Emit training statistics to the frontend"""
+        # Create application context if needed
+        with self.app.app_context():
+            self.socketio.emit('trainingStats', {'model_id': model_id, 'stats': stats})
+    
+    def update_training_stats(self, model_id, stats):
+        """Store training statistics for polling"""
+        self.latest_stats[model_id] = stats
         
     def start(self, debug=False, use_thread=True):
         """Start the Flask server"""
         if use_thread:
-            threading.Thread(target=self.app.run, 
-                            kwargs={'host': '0.0.0.0', 
-                                   'port': self.port, 
-                                   'debug': debug},
-                            daemon=True).start()
+            thread = threading.Thread(target=lambda: self.socketio.run(
+                self.app, 
+                host='0.0.0.0', 
+                port=self.port,
+                debug=debug,
+                use_reloader=False  # Important - disable reloader
+            ))
+            thread.daemon = True
+            thread.start()
         else:
-            self.app.run(host='0.0.0.0', port=self.port, debug=debug)
+            self.socketio.run(self.app, host='0.0.0.0', port=self.port, debug=debug)
