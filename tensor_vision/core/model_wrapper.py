@@ -63,25 +63,70 @@ class VisualizableModel(nn.Module):
         }
         
     def _get_model_structure(self):
-        """Extract model structure for visualization"""
-        structure = []
-        
-        def add_module(module, name=''):
-            # Get basic info about this module
-            info = {
+        """Extract model structure for visualization in sequential format"""
+        def get_module_info(module, name=''):
+            # Extract module hierarchy from name
+            name_parts = name.split('.')
+            module_path = []
+            for i in range(len(name_parts)):
+                if i % 2 == 0:  # Take every other part as module name
+                    module_path.append(name_parts[i])
+            
+            return {
                 'name': name,
                 'type': module.__class__.__name__,
                 'parameters': sum(p.numel() for p in module.parameters()),
                 'trainable': sum(p.numel() for p in module.parameters() if p.requires_grad),
-                'children': []
+                'shape': None,  # Will be populated by monitor data if available
+                'module_path': module_path,  # Add module hierarchy information
+                'module_name': module_path[0] if module_path else 'main'  # Top-level module name
             }
-            
-            # Recursively add children
-            for child_name, child_module in module.named_children():
-                full_child_name = f"{name}.{child_name}" if name else child_name
-                info['children'].append(add_module(child_module, full_child_name))
+
+        # Get all modules in order of execution
+        modules = []
+        input_added = False
+        
+        for name, module in self.model.named_modules():
+            if name == '':  # Skip the root module
+                continue
                 
-            return info
+            # Skip container modules like Sequential
+            if isinstance(module, (nn.Sequential, nn.ModuleList, nn.ModuleDict)):
+                continue
+                
+            # Add input layer if not added
+            if not input_added:
+                input_info = {
+                    'name': 'input',
+                    'type': 'Input',
+                    'parameters': 0,
+                    'trainable': 0,
+                    'shape': self.latest_input.shape if self.latest_input is not None else None,
+                    'module_path': ['input'],
+                    'module_name': 'input'
+                }
+                modules.append(input_info)
+                input_added = True
             
-        structure.append(add_module(self.model))
-        return structure
+            # Add the current module
+            module_info = get_module_info(module, name)
+            
+            # Add shape information if available from monitor
+            if name in self.monitor.activations:
+                shape_data = self.monitor.activations[name].get('shape', None)
+                if shape_data is not None:
+                    module_info['shape'] = shape_data
+            
+            modules.append(module_info)
+
+        # Create sequential structure
+        for i in range(len(modules) - 1):
+            modules[i]['next'] = modules[i + 1]['name']
+            
+        # Add output information to the last layer
+        if self.latest_output is not None:
+            modules[-1]['shape'] = tuple(self.latest_output.shape)
+            modules[-1]['module_name'] = 'output'
+            modules[-1]['module_path'] = ['output']
+
+        return modules
