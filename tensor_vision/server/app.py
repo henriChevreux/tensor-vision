@@ -55,6 +55,92 @@ class VisualizationServer:
             data = self.visual_models[model_id].get_visualization_data()
             return jsonify(data['monitor_data']['activations'])
             
+        @app.route('/api/models/<model_id>/gradients', methods=['GET'])
+        def get_gradients(model_id):
+            if model_id not in self.visual_models:
+                return jsonify({'error': 'Model not found'}), 404
+            
+            try:
+                data = self.visual_models[model_id].get_visualization_data()
+                gradients_data = data['monitor_data']['gradients']
+                
+                # Process gradients data to make it JSON serializable
+                processed_gradients = {}
+                for layer_name, gradient_info in gradients_data.items():
+                    processed_gradients[layer_name] = {
+                        'timestamp': gradient_info.get('timestamp', 0),
+                        'input': [],
+                        'output': []
+                    }
+                    
+                    # Process input gradients
+                    if 'input' in gradient_info:
+                        for tensor in gradient_info['input']:
+                            if tensor is not None:
+                                # Get shape and convert data if possible
+                                shape = tensor.shape
+                                try:
+                                    # Convert to Python list for small tensors
+                                    if tensor.numel() < 10000:  # Only for reasonably sized tensors
+                                        data = tensor.flatten().tolist()
+                                    else:
+                                        # For large tensors, just provide statistics
+                                        data = {
+                                            'min': float(tensor.min()),
+                                            'max': float(tensor.max()),
+                                            'mean': float(tensor.mean()),
+                                            'std': float(tensor.std())
+                                        }
+                                    
+                                    processed_gradients[layer_name]['input'].append({
+                                        'shape': list(shape),
+                                        'data': data
+                                    })
+                                except Exception as e:
+                                    # If conversion fails, just provide shape
+                                    processed_gradients[layer_name]['input'].append({
+                                        'shape': list(shape) if shape else None,
+                                        'error': str(e)
+                                    })
+                            else:
+                                processed_gradients[layer_name]['input'].append(None)
+                    
+                    # Process output gradients
+                    if 'output' in gradient_info:
+                        for tensor in gradient_info['output']:
+                            if tensor is not None:
+                                # Get shape and convert data if possible
+                                shape = tensor.shape
+                                try:
+                                    # Convert to Python list for small tensors
+                                    if tensor.numel() < 10000:  # Only for reasonably sized tensors
+                                        data = tensor.flatten().tolist()
+                                    else:
+                                        # For large tensors, just provide statistics
+                                        data = {
+                                            'min': float(tensor.min()),
+                                            'max': float(tensor.max()),
+                                            'mean': float(tensor.mean()),
+                                            'std': float(tensor.std())
+                                        }
+                                    
+                                    processed_gradients[layer_name]['output'].append({
+                                        'shape': list(shape),
+                                        'data': data
+                                    })
+                                except Exception as e:
+                                    # If conversion fails, just provide shape
+                                    processed_gradients[layer_name]['output'].append({
+                                        'shape': list(shape) if shape else None,
+                                        'error': str(e)
+                                    })
+                            else:
+                                processed_gradients[layer_name]['output'].append(None)
+                
+                return jsonify(processed_gradients)
+            except Exception as e:
+                return jsonify({'error': f'Error processing gradients: {str(e)}'}), 500
+            
         @app.route('/api/models/<model_id>/stats', methods=['GET'])
         def get_stats(model_id):
             if model_id not in self.visual_models:

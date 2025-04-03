@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { getModelStructure } from './services/api';
+import { getModelStructure, getGradients } from './services/api';
 import ModelGraph from './components/ModelGraph';
 import TrainingMetrics from './components/TrainingMetrics';
+import GradientHeatmap from './components/GradientHeatmap';
 import './App.css';
 
 function App() {
@@ -9,6 +10,7 @@ function App() {
   const [selectedModel, setSelectedModel] = useState(null);
   const [modelData, setModelData] = useState(null);
   const [trainingMetrics, setTrainingMetrics] = useState(null);
+  const [gradientData, setGradientData] = useState(null);
   const [connected, setConnected] = useState(true);
   
   // Fetch models
@@ -72,6 +74,33 @@ function App() {
     return () => clearInterval(interval);
   }, [selectedModel]);
   
+  // Fetch gradient data 
+  useEffect(() => {
+    if (!selectedModel) return;
+    
+    const fetchGradientData = async () => {
+      try {
+        const data = await getGradients(selectedModel);
+        // Only update state if data has content
+        if (data && Object.keys(data).length > 0) {
+          setGradientData(data);
+        }
+      } catch (error) {
+        console.error('Error fetching gradient data:', error);
+        // Don't update state on error to keep previous valid data
+      }
+    };
+    
+    fetchGradientData(); // Fetch immediately
+    
+    // Poll for gradient data every 1 second
+    const interval = setInterval(fetchGradientData, 1000);
+    return () => clearInterval(interval);
+  }, [selectedModel]);
+  
+  // Check if gradient data is valid for display
+  const hasValidGradientData = gradientData && Object.keys(gradientData).length > 0;
+  
   return (
     <div className="App">
       <header className="App-header">
@@ -113,6 +142,18 @@ function App() {
           
           {trainingMetrics && (
             <TrainingMetrics metrics={trainingMetrics} />
+          )}
+          
+          {hasValidGradientData ? (
+            <GradientHeatmap 
+              gradients={gradientData} 
+              key={`gradient-heatmap-${selectedModel}`} 
+            />
+          ) : (
+            <div className="section-container">
+              <h3>Gradient Visualization</h3>
+              <p>Waiting for gradient data...</p>
+            </div>
           )}
           
           {modelData ? (
