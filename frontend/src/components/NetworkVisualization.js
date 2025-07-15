@@ -38,16 +38,36 @@ const NetworkVisualization = ({ structure }) => {
   const zoomIn = () => {
     if (viewMode === '2d' && zoomBehaviorRef.current && svgRef.current) {
       const svg = d3.select(svgRef.current);
-      const newTransform = d3.zoomTransform(svgRef.current).scale(1.5);
-      svg.transition().duration(300).call(zoomBehaviorRef.current.transform, newTransform);
+      // Use SVG coordinate system (viewBox dimensions)
+      const width = 1200;
+      const height = 600;
+      const centerX = width / 2;
+      const centerY = height / 2;
+      
+      // Create a zoom transform that centers on the middle of the SVG
+      svg.transition().duration(300).call(
+        zoomBehaviorRef.current.scaleBy,
+        1.5,
+        [centerX, centerY]
+      );
     }
   };
 
   const zoomOut = () => {
     if (viewMode === '2d' && zoomBehaviorRef.current && svgRef.current) {
       const svg = d3.select(svgRef.current);
-      const newTransform = d3.zoomTransform(svgRef.current).scale(1 / 1.5);
-      svg.transition().duration(300).call(zoomBehaviorRef.current.transform, newTransform);
+      // Use SVG coordinate system (viewBox dimensions)
+      const width = 1200;
+      const height = 600;
+      const centerX = width / 2;
+      const centerY = height / 2;
+      
+      // Create a zoom transform that centers on the middle of the SVG
+      svg.transition().duration(300).call(
+        zoomBehaviorRef.current.scaleBy,
+        1 / 1.5,
+        [centerX, centerY]
+      );
     }
   };
 
@@ -148,6 +168,11 @@ const NetworkVisualization = ({ structure }) => {
           // Apply transform to the main content group
           svg.select('.main-content')
             .attr('transform', transform);
+        })
+        // Center wheel zoom on the mouse position
+        .filter((event) => {
+          // Allow wheel and drag events
+          return !event.ctrlKey && !event.button;
         });
 
       zoomBehaviorRef.current = zoom;
