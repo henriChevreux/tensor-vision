@@ -202,3 +202,43 @@
 .network-visualization-container.mode-3d {
   box-shadow: 0 0 20px rgba(79, 70, 229, 0.3), 0 4px 20px rgba(0, 0, 0, 0.2);
 } 
+
+/* 2D Navigation Controls */
+.navigation-controls {
+  margin-top: 10px;
+  font-size: 13px;
+}
+
+.navigation-controls button {
+  background-color: #7c3aed;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.navigation-controls button:hover {
+  background-color: #8b5cf6;
+}
+
+.navigation-controls button:active {
+  background-color: #6d28d9;
+  transform: translateY(1px);
+}
+
+/* 2D mode specific cursor styles */
+.network-visualization-container:not(.mode-3d) svg {
+  cursor: grab;
+}
+
+.network-visualization-container:not(.mode-3d) svg:active {
+  cursor: grabbing;
+}
+
+/* Add a subtle glow effect for 2D mode */
+.network-visualization-container:not(.mode-3d) {
+  box-shadow: 0 0 20px rgba(124, 58, 237, 0.2), 0 4px 20px rgba(0, 0, 0, 0.2);
+} 
