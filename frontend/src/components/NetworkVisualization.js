@@ -138,8 +138,9 @@ const NetworkVisualization = ({ structure }) => {
     // Process nodes to set positions based on the structure
     structure.forEach((node, i) => {
       // Extract useful properties from the node
-      const name = node.name || node.module_name || `Node ${i}`;
-      const type = node.module_name || "Unknown";
+      const name = node.name || `Node ${i}`;
+      const module_name = node.module_name || `Node ${i}`;
+      const type = node.name || "Unknown";
       const params = parseInt(node.parameters || 0);
       const next = node.next || null;
       
@@ -149,6 +150,7 @@ const NetworkVisualization = ({ structure }) => {
         y: 0, // Will set positions later
         z: 0, // Z position for 3D
         name: name,
+        module_name: module_name,
         type: type,
         parameters: params,
         next: next,
@@ -571,22 +573,24 @@ const NetworkVisualization = ({ structure }) => {
     function getNodeColor(type) {
       const colors = {
         'input': '#60a5fa', // blue
-        'conv1': '#4ade80', // green
-        'conv2': '#4ade80', // green
-        'pool1': '#a78bfa', // purple
-        'pool2': '#a78bfa', // purple
-        'fc1': '#f97316', // orange
-        'fc2': '#f97316', // orange
-        'relu1': '#ec4899', // pink
-        'relu2': '#ec4899', // pink
-        'relu3': '#ec4899', // pink
+        //'encoder': '#f59e0b', // yellow
+        'proj': '#f97316', // orange
+        'norm': '#CAE7D3', // azure
+        'conv': '#4ade80', // green
+        'drop': '#a78bfa', // purple
+        'attn': '#ec4899', // pink
+        'mlp': '#4ade80', // green
+        'pool': '#a78bfa', // purple
+        'fc': '#f97316', // orange
+        'relu': '#ec4899', // pink
         'output': '#f43f5e' // red
       };
       
       // Check if the type is in our color map (case insensitive)
       const lowerType = type.toLowerCase();
       for (const key in colors) {
-        if (lowerType.includes(key)) {
+        // Match color based on the last part of the type (e.g. "mlp.fc1" -> "fc1")
+        if (lowerType.split(".").slice(-1)[0].includes(key)) {
           return colors[key];
         }
       }
@@ -675,10 +679,10 @@ const NetworkVisualization = ({ structure }) => {
     // Add legend
     const legendData = [
       {type: 'input', label: 'Input', color: getNodeColor('input')},
-      {type: 'conv1', label: 'Convolution', color: getNodeColor('conv1')},
-      {type: 'fc1', label: 'Fully Connected', color: getNodeColor('fc1')},
-      {type: 'pool1', label: 'Pooling', color: getNodeColor('pool1')},
-      {type: 'relu1', label: 'ReLU', color: getNodeColor('relu1')},
+      {type: 'conv', label: 'Convolution', color: getNodeColor('conv')},
+      {type: 'fc', label: 'Fully Connected', color: getNodeColor('fc')},
+      {type: 'pool', label: 'Pooling', color: getNodeColor('pool')},
+      {type: 'relu', label: 'ReLU', color: getNodeColor('relu')},
       {type: 'sequential', label: 'Sequential Connection', color: '#60a5fa', isLink: true},
       {type: 'layerwise', label: 'Layer Connection', color: '#34d399', isLink: true, showIf: ['layerwise', 'full']},
       {type: 'full', label: 'All Connections', color: '#a78bfa', isLink: true, showIf: ['full']}
