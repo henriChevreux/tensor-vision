@@ -91,7 +91,7 @@ const NetworkVisualization = ({ structure }) => {
     container.selectAll('.view-controls').remove();
 
     // Setup dimensions
-    const width = 800;
+    const width = 1200;
     const height = 600;
     const margin = { top: 50, right: 50, bottom: 50, left: 50 };
     const innerWidth = width - margin.left - margin.right;
@@ -215,12 +215,12 @@ const NetworkVisualization = ({ structure }) => {
     
     // Calculate positions based on view mode
     if (viewMode === '2d') {
-      // 2D layout - vertical positioning
-      const verticalSpacing = innerHeight / (processedNodes.length + 1);
-      
+      // 2D layout - horizontal positioning
+      const horizontalSpacing = innerWidth / (processedNodes.length + 1);
+
       processedNodes.forEach((node, i) => {
-        node.x = innerWidth / 2;
-        node.y = margin.top + verticalSpacing * (i + 1);
+        node.x = margin.left + horizontalSpacing * (i + 1);
+        node.y = margin.top + innerHeight / 2;
         node.z = 0;
       });
     } else {
