@@ -1,6 +1,16 @@
 # TensorVision
 
+> ⚠️ **Work in Progress** - This project is currently under active development. Features and APIs may change.
+
 A visual-first approach to machine learning development and debugging. TensorVision is a lightweight framework that wraps PyTorch models to provide real-time visualization and debugging capabilities.
+
+## Screenshots
+
+![TensorVision Interface](static/screenshot_1.jpeg)
+*Real-time monitoring of model training with performance metrics*
+
+![Training Visualization](static/screenshot_2.jpeg)
+*Interactive neural network visualization with 3D model architecture and real-time gradient visualizations*
 
 ## Features
 

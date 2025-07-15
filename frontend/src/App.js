@@ -3,6 +3,7 @@ import { getModelStructure, getGradients } from './services/api';
 import ModelGraph from './components/ModelGraph';
 import TrainingMetrics from './components/TrainingMetrics';
 import GradientHeatmap from './components/GradientHeatmap';
+import NetworkVisualization from './components/NetworkVisualization';
 import './App.css';
 
 function App() {
@@ -12,6 +13,7 @@ function App() {
   const [trainingMetrics, setTrainingMetrics] = useState(null);
   const [gradientData, setGradientData] = useState(null);
   const [connected, setConnected] = useState(true);
+  const [activeTab, setActiveTab] = useState('graph'); // Default tab
   
   // Fetch models
   useEffect(() => {
@@ -61,9 +63,14 @@ function App() {
         if (response.ok) {
           const data = await response.json();
           setTrainingMetrics(data);
+        } else {
+          // Handle non-OK response (e.g., 404, 500)
+          console.warn(`Server returned ${response.status} when fetching training stats`);
+          // Don't update state on error to keep previous valid data
         }
       } catch (error) {
         console.error('Error fetching training stats:', error);
+        // Don't update state on error to keep previous valid data
       }
     };
     
@@ -144,28 +151,68 @@ function App() {
             <TrainingMetrics metrics={trainingMetrics} />
           )}
           
-          {hasValidGradientData ? (
-            <GradientHeatmap 
-              gradients={gradientData} 
-              key={`gradient-heatmap-${selectedModel}`} 
-            />
-          ) : (
-            <div className="section-container">
-              <h3>Gradient Visualization</h3>
-              <p>Waiting for gradient data...</p>
+          {/* Tabs for different visualizations */}
+          {modelData && (
+            <div className="visualization-tabs">
+              <div className="tab-buttons">
+                <button 
+                  className={activeTab === 'graph' ? 'active' : ''}
+                  onClick={() => setActiveTab('graph')}
+                >
+                  Layer Graph
+                </button>
+                <button 
+                  className={activeTab === 'network' ? 'active' : ''}
+                  onClick={() => setActiveTab('network')}
+                >
+                  Neural Network
+                </button>
+                <button 
+                  className={activeTab === 'gradients' ? 'active' : ''}
+                  onClick={() => setActiveTab('gradients')}
+                >
+                  Gradients
+                </button>
+              </div>
+              
+              <div className="tab-content">
+                {activeTab === 'graph' && (
+                  <ModelGraph structure={modelData.structure} />
+                )}
+                
+                {activeTab === 'network' && modelData && modelData.structure && (
+                  <NetworkVisualization 
+                    structure={Array.isArray(modelData.structure) ? modelData.structure : []} 
+                    key={`network-viz-${selectedModel}`} 
+                  />
+                )}
+                
+                {activeTab === 'gradients' && (
+                  hasValidGradientData ? (
+                    <GradientHeatmap 
+                      gradients={gradientData} 
+                      key={`gradient-heatmap-${selectedModel}`} 
+                    />
+                  ) : (
+                    <div className="section-container">
+                      <h3>Gradient Visualization</h3>
+                      <p>Waiting for gradient data...</p>
+                    </div>
+                  )
+                )}
+              </div>
             </div>
           )}
           
-          {modelData ? (
-            <>
-              <ModelGraph structure={modelData.structure} />
-              <div className="model-info">
-                <h3>Model Info</h3>
-                <p>Input shape: {JSON.stringify(modelData.input_shape)}</p>
-                <p>Output shape: {JSON.stringify(modelData.output_shape)}</p>
-              </div>
-            </>
-          ) : (
+          {modelData && (
+            <div className="model-info">
+              <h3>Model Info</h3>
+              <p>Input shape: {JSON.stringify(modelData.input_shape)}</p>
+              <p>Output shape: {JSON.stringify(modelData.output_shape)}</p>
+            </div>
+          )}
+          
+          {!modelData && (
             <p>Select a model to visualize</p>
           )}
         </div>
