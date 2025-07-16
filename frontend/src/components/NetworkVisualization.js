@@ -11,10 +11,15 @@ const NetworkVisualization = ({ structure }) => {
   const [lastPos, setLastPos] = useState({ x: 0, y: 0 });
   const [connectionDensity, setConnectionDensity] = useState('sequential'); // 'sequential', 'layerwise', 'full'
   
+  // Add 2D navigation state
+  const [zoomTransform, setZoomTransform] = useState({ k: 1, x: 0, y: 0 });
+  const zoomBehaviorRef = useRef(null);
+  
   // Function to toggle between 2D and 3D views
   const toggleViewMode = () => {
     setViewMode(prev => prev === '2d' ? '3d' : '2d');
     setRotation({ x: 0, y: 0, z: 0 }); // Reset rotation when toggling
+    setZoomTransform({ k: 1, x: 0, y: 0 }); // Reset zoom when toggling
   };
 
   // Function to cycle through connection densities
@@ -27,6 +32,51 @@ const NetworkVisualization = ({ structure }) => {
         default: return 'sequential';
       }
     });
+  };
+
+  // 2D Navigation functions
+  const zoomIn = () => {
+    if (viewMode === '2d' && zoomBehaviorRef.current && svgRef.current) {
+      const svg = d3.select(svgRef.current);
+      // Use SVG coordinate system (viewBox dimensions)
+      const width = 1200;
+      const height = 600;
+      const centerX = width / 2;
+      const centerY = height / 2;
+      
+      // Create a zoom transform that centers on the middle of the SVG
+      svg.transition().duration(300).call(
+        zoomBehaviorRef.current.scaleBy,
+        1.5,
+        [centerX, centerY]
+      );
+    }
+  };
+
+  const zoomOut = () => {
+    if (viewMode === '2d' && zoomBehaviorRef.current && svgRef.current) {
+      const svg = d3.select(svgRef.current);
+      // Use SVG coordinate system (viewBox dimensions)
+      const width = 1200;
+      const height = 600;
+      const centerX = width / 2;
+      const centerY = height / 2;
+      
+      // Create a zoom transform that centers on the middle of the SVG
+      svg.transition().duration(300).call(
+        zoomBehaviorRef.current.scaleBy,
+        1 / 1.5,
+        [centerX, centerY]
+      );
+    }
+  };
+
+  const resetZoom = () => {
+    if (viewMode === '2d' && zoomBehaviorRef.current && svgRef.current) {
+      const svg = d3.select(svgRef.current);
+      const identity = d3.zoomIdentity;
+      svg.transition().duration(500).call(zoomBehaviorRef.current.transform, identity);
+    }
   };
 
   // Handle mouse down for dragging
@@ -107,6 +157,36 @@ const NetworkVisualization = ({ structure }) => {
 
     svgRef.current = svg.node();
 
+    // Set up 2D zoom behavior
+    if (viewMode === '2d') {
+      const zoom = d3.zoom()
+        .scaleExtent([0.1, 5])
+        .on('zoom', (event) => {
+          const { transform } = event;
+          setZoomTransform({ k: transform.k, x: transform.x, y: transform.y });
+          
+          // Apply transform to the main content group
+          svg.select('.main-content')
+            .attr('transform', transform);
+        })
+        // Center wheel zoom on the mouse position
+        .filter((event) => {
+          // Allow wheel and drag events
+          return !event.ctrlKey && !event.button;
+        });
+
+      zoomBehaviorRef.current = zoom;
+      svg.call(zoom);
+      
+      // Apply initial zoom transform if it exists
+      if (zoomTransform.k !== 1 || zoomTransform.x !== 0 || zoomTransform.y !== 0) {
+        const transform = d3.zoomIdentity
+          .translate(zoomTransform.x, zoomTransform.y)
+          .scale(zoomTransform.k);
+        svg.call(zoom.transform, transform);
+      }
+    }
+
     // Add a fancy background gradient
     const defs = svg.append('defs');
     const gradient = defs.append('linearGradient')
@@ -183,6 +263,34 @@ const NetworkVisualization = ({ structure }) => {
       .text(`Connections: ${connectionDensity.charAt(0).toUpperCase() + connectionDensity.slice(1)}`)
       .style('margin-top', '10px')
       .on('click', cycleConnectionDensity);
+
+    // Add 2D navigation controls
+    if (viewMode === '2d') {
+      const navigationControls = controls.append('div')
+        .attr('class', 'navigation-controls')
+        .style('margin-top', '10px');
+      
+      navigationControls.append('div').text('Navigation:');
+      
+      const zoomControls = navigationControls.append('div').style('margin-top', '5px');
+      zoomControls.append('button')
+        .text('Zoom In')
+        .style('margin-right', '5px')
+        .on('click', zoomIn);
+      zoomControls.append('button')
+        .text('Zoom Out')
+        .style('margin-right', '5px')
+        .on('click', zoomOut);
+      zoomControls.append('button')
+        .text('Reset')
+        .on('click', resetZoom);
+      
+      navigationControls.append('div')
+        .style('margin-top', '5px')
+        .style('font-size', '10px')
+        .style('color', '#e5e7eb')
+        .text('Drag to pan');
+    }
       
     if (viewMode === '3d') {
       // Add rotation controls
@@ -469,8 +577,11 @@ const NetworkVisualization = ({ structure }) => {
       .attr('d', 'M0,-5L10,0L0,5')
       .attr('fill', '#60a5fa');
 
+    // Create main content group for 2D zoom/pan
+    const mainContent = svg.append('g').attr('class', 'main-content');
+
     // Draw connections first (so they're behind nodes)
-    const linksGroup = svg.append('g').attr('class', 'links');
+    const linksGroup = mainContent.append('g').attr('class', 'links');
     
     links.forEach((link, i) => {
       // Get positions based on view mode
@@ -543,7 +654,7 @@ const NetworkVisualization = ({ structure }) => {
     });
 
     // Draw nodes
-    const nodesGroup = svg.append('g').attr('class', 'nodes');
+    const nodesGroup = mainContent.append('g').attr('class', 'nodes');
     
     // Sort nodes by z-index for 3D mode to ensure proper layering
     if (viewMode === '3d') {
@@ -683,6 +794,10 @@ const NetworkVisualization = ({ structure }) => {
       {type: 'fc', label: 'Fully Connected', color: getNodeColor('fc')},
       {type: 'pool', label: 'Pooling', color: getNodeColor('pool')},
       {type: 'relu', label: 'ReLU', color: getNodeColor('relu')},
+      {type: 'norm', label: 'Normalization', color: getNodeColor('norm')},
+      {type: 'drop', label: 'Dropout', color: getNodeColor('drop')},
+      {type: 'attn', label: 'Attention', color: getNodeColor('attn')},
+      {type: 'mlp', label: 'MLP', color: getNodeColor('mlp')},
       {type: 'sequential', label: 'Sequential Connection', color: '#60a5fa', isLink: true},
       {type: 'layerwise', label: 'Layer Connection', color: '#34d399', isLink: true, showIf: ['layerwise', 'full']},
       {type: 'full', label: 'All Connections', color: '#a78bfa', isLink: true, showIf: ['full']}
@@ -731,7 +846,7 @@ const NetworkVisualization = ({ structure }) => {
       .attr('font-size', '12px')
       .text(d => d.label);
     
-    // Add extra info about 3D mode
+    // Add extra info about current mode
     if (viewMode === '3d') {
       svg.append('text')
         .attr('x', width / 2)
@@ -740,6 +855,14 @@ const NetworkVisualization = ({ structure }) => {
         .attr('fill', '#e5e7eb')
         .attr('font-size', '12px')
         .text('Use rotation controls to explore the 3D visualization');
+    } else {
+      svg.append('text')
+        .attr('x', width / 2)
+        .attr('y', height - 30)
+        .attr('text-anchor', 'middle')
+        .attr('fill', '#e5e7eb')
+        .attr('font-size', '12px')
+        .text('Use zoom controls or drag to navigate • Scroll to zoom');
     }
     
     // Cleanup function
