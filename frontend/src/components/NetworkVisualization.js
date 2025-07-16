@@ -794,6 +794,10 @@ const NetworkVisualization = ({ structure }) => {
       {type: 'fc', label: 'Fully Connected', color: getNodeColor('fc')},
       {type: 'pool', label: 'Pooling', color: getNodeColor('pool')},
       {type: 'relu', label: 'ReLU', color: getNodeColor('relu')},
+      {type: 'norm', label: 'Normalization', color: getNodeColor('norm')},
+      {type: 'drop', label: 'Dropout', color: getNodeColor('drop')},
+      {type: 'attn', label: 'Attention', color: getNodeColor('attn')},
+      {type: 'mlp', label: 'MLP', color: getNodeColor('mlp')},
       {type: 'sequential', label: 'Sequential Connection', color: '#60a5fa', isLink: true},
       {type: 'layerwise', label: 'Layer Connection', color: '#34d399', isLink: true, showIf: ['layerwise', 'full']},
       {type: 'full', label: 'All Connections', color: '#a78bfa', isLink: true, showIf: ['full']}
